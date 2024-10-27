@@ -1,55 +1,42 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp } from 'lucide-react';
+import LoginScreen from './components/LoginScreen';
 import Sidebar from './components/Sidebar';
 import ChatBox from './components/ChatBox';
 import StarterPrompts from './components/StarterPrompts';
-import { Chat, Message, TelegramUser, AuthResponse } from './types';
-import { CONTRACT_ADDRESS, API_BASE_URL } from './config/constants';
+import type { Chat, Message, TelegramUser, AuthResponse } from './types';
+import { API_BASE_URL } from './config/constants';
 
-declare global {
-  interface Window {
-    Telegram?: {
-      Login: {
-        auth: (options: any) => void;
-      };
-    };
-  }
-}
-
-function App() {
-  const [user, setUser] = useState<AuthResponse | null>(null);
+export default function App() {
+  const [user, setUser] = useState<AuthResponse | null>(() => {
+    const savedUser = localStorage.getItem('user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
   const [chats, setChats] = useState<Chat[]>([]);
   const [activeChat, setActiveChat] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://telegram.org/js/telegram-widget.js?22';
-    script.setAttribute('data-telegram-login', 'YourBotName');
-    script.setAttribute('data-size', 'large');
-    script.setAttribute('data-onauth', 'onTelegramAuth(user)');
-    script.setAttribute('data-request-access', 'write');
-    document.head.appendChild(script);
-
-    // @ts-ignore
-    window.onTelegramAuth = async (user: TelegramUser) => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/auth/telegram`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(user),
-        });
-        
-        if (response.ok) {
-          const data: AuthResponse = await response.json();
-          setUser(data);
-          localStorage.setItem('user', JSON.stringify(data));
-        }
-      } catch (error) {
-        console.error('Authentication error:', error);
+  const handleTelegramAuth = async (telegramUser: TelegramUser) => {
+    try {
+      setAuthError(null);
+      const response = await fetch(`${API_BASE_URL}/auth/telegram`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(telegramUser),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Authentication failed');
       }
-    };
-  }, []);
+
+      const data: AuthResponse = await response.json();
+      setUser(data);
+      localStorage.setItem('user', JSON.stringify(data));
+    } catch (error) {
+      console.error('Authentication error:', error);
+      setAuthError('Failed to authenticate. Please try again.');
+    }
+  };
 
   const handleNewChat = async () => {
     try {
@@ -123,33 +110,12 @@ function App() {
   const handleLogout = () => {
     setUser(null);
     localStorage.removeItem('user');
+    setChats([]);
+    setActiveChat(null);
   };
 
   if (!user) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-        <div className="bg-slate-800 p-8 rounded-lg shadow-xl max-w-md w-full border border-slate-700">
-          <div className="flex justify-center mb-6">
-            <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center shadow-lg shadow-blue-500/20">
-              <TrendingUp size={32} className="text-white" />
-            </div>
-          </div>
-          <h1 className="text-2xl font-bold mb-2 text-white text-center">Terminal of Trade AI</h1>
-          <p className="mb-4 text-blue-500 text-center font-mono">$TOTAI</p>
-          <div className="p-4 bg-slate-900 rounded-lg mb-6 text-center">
-            <a
-              href={`https://etherscan.io/address/${CONTRACT_ADDRESS}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-400 hover:text-blue-300 transition-colors font-mono text-sm break-all"
-            >
-              {CONTRACT_ADDRESS}
-            </a>
-          </div>
-          <div id="telegram-login-button" className="flex justify-center"></div>
-        </div>
-      </div>
-    );
+    return <LoginScreen onAuth={handleTelegramAuth} authError={authError} />;
   }
 
   return (
@@ -177,5 +143,3 @@ function App() {
     </div>
   );
 }
-
-export default App;

@@ -26,3 +26,14 @@ export interface AuthResponse {
   last_name: string;
   tokens_left: number;
 }
+
+declare global {
+  interface Window {
+    Telegram: {
+      Login: {
+        widget: (config: any) => void;
+      };
+    };
+    telegramCallback: (user: TelegramUser) => void;
+  }
+}
