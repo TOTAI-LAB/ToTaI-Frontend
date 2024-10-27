@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import LoginScreen from './components/LoginScreen';
 import Sidebar from './components/Sidebar';
 import ChatBox from './components/ChatBox';
 import StarterPrompts from './components/StarterPrompts';
-import type { Chat, Message, TelegramUser, AuthResponse } from './types';
+import type { Chat, Message, AuthResponse } from './types';
 import { API_BASE_URL } from './config/constants';
 
 export default function App() {
@@ -16,22 +16,11 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  const handleTelegramAuth = async (telegramUser: TelegramUser) => {
+  const handleTelegramAuth = async (authResponse: AuthResponse) => {
     try {
       setAuthError(null);
-      const response = await fetch(`${API_BASE_URL}/auth/telegram`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(telegramUser),
-      });
-      
-      if (!response.ok) {
-        throw new Error('Authentication failed');
-      }
-
-      const data: AuthResponse = await response.json();
-      setUser(data);
-      localStorage.setItem('user', JSON.stringify(data));
+      setUser(authResponse);
+      localStorage.setItem('user', JSON.stringify(authResponse));
     } catch (error) {
       console.error('Authentication error:', error);
       setAuthError('Failed to authenticate. Please try again.');

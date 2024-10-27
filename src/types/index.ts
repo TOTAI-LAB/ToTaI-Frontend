@@ -1,3 +1,9 @@
+export interface ChatRequest {
+  session_id: string; // Session ID to track the chat session
+  user_id: number; // User ID for the authenticated user
+  query: string; // The chat message from the user
+}
+
 export interface Message {
   role: 'user' | 'assistant';
   content: string;

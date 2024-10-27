@@ -1,24 +1,36 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { TrendingUp, Send, Twitter } from 'lucide-react';
 import { CONTRACT_ADDRESS, TWITTER_URL, TELEGRAM_URL, TELEGRAM_BOT_NAME } from '../config/constants';
-import type { TelegramUser } from '../types';
+import type { TelegramUser, AuthResponse } from '../types';
+import { authenticateUser } from '../service/apiService';
 
-interface LoginScreenProps {
-  onAuth: (user: TelegramUser) => void;
+type LoginScreenProps = {
+  onAuth: (authResponse: AuthResponse) => void; // Updated to accept AuthResponse
   authError: string | null;
-}
+};
 
 export default function LoginScreen({ onAuth, authError }: LoginScreenProps) {
+  const [loading, setLoading] = useState(false);
+
   useEffect(() => {
     const script = document.createElement('script');
     script.src = 'https://telegram.org/js/telegram-widget.js?22';
     script.async = true;
     document.body.appendChild(script);
 
-    // Define the Telegram callback for authentication
-    (window as any).telegramCallback = (user: TelegramUser) => {
-      onAuth(user);
+    (window as any).telegramCallback = async (user: TelegramUser) => {
+      console.log('Telegram callback triggered with user:', user); // Add this line
+      setLoading(true);
+      try {
+        const authResponse = await authenticateUser(user);
+        onAuth(authResponse); 
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
     };
+    
 
     return () => {
       document.body.removeChild(script);
@@ -92,6 +104,7 @@ export default function LoginScreen({ onAuth, authError }: LoginScreenProps) {
             ></script>
           </div>
         </div>
+        {loading && <p className="text-white text-center">Loading...</p>}
       </div>
     </div>
   );
